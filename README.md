@@ -1,63 +1,146 @@
-# 🌦️ WeatherWise Template
+Weather Advisor
+A smart weather application that combines real-time weather data with AI-powered natural language processing for intuitive weather queries.
+Features
 
-Welcome to the **WeatherWise Assignment Starter Template**! This repository helps you kickstart your project by combining Python, weather APIs, data visualisation, and AI-assisted development. 🤖📊
+Current Weather & Forecasts: Real-time weather data for any location
+Interactive Charts: Temperature and precipitation visualizations
+Natural Language Queries: Ask questions like "Will it rain tomorrow?"
+Smart Location Search: Intelligent location validation with suggestions
+Multiple Data Sources: Fallback strategies for reliable data access
+User-Friendly Interface: Clean console-based menu system
 
-![Build With AI](https://img.shields.io/badge/Built_with-AI-blueviolet?logo=openai)
-![Python](https://img.shields.io/badge/Made_with-Python-3776AB?logo=python)
-![Visualisation](https://img.shields.io/badge/Includes-Visualisations-orange?logo=plotly)
+Requirements
 
----
+Python 3.8 or higher
+Internet connection for weather data
+Terminal/Command prompt
 
-## 🚀 How to Use This Template
+Installation
 
-1. Click **"Use this template"** on GitHub to create your own copy.
-2. Rename your repository to something like `weatherwise-jane-doe`.
-3. Clone it and start developing in `starter_notebook.ipynb`.
+Clone or download the project files
+Install required packages:
 
----
+pip install fetch-my-weather hands-on-ai matplotlib pyinputplus
+Quick Start
 
-## 📁 Folder Structure
+Run the main application:
 
-- `starter_notebook.ipynb` — Main notebook to build your project.
-- `ASSIGNMENT.md` — Full assignment specification.
-- `ai-conversations/` — Save your `.txt` AI conversations here.
-- `resources/` — Guides, prompting tips, and AI technique examples.
-- `submission/` — Files to help you finalise your submission:
-  - `checklist-md.md` — Submission checklist
-  - `reflection.md` — Write your 300–500 word project reflection
-  - `one-page-summary.md` — (Optional) Your own summary of key ideas or process
+python main_application.py
 
----
+Follow the setup prompts to configure your location
+Explore features through the main menu
 
-📄 **Quick Overview:**  
-A one-page summary of the full assignment is available in [`resources/assignment-summary.md`](resources/assignment-summary.md).
+Project Structure
+weather-advisor/
+├── setup_configuration.py    # Environment setup
+├── weather_data_functions.py  # Data retrieval & processing
+├── visualization_functions.py # Charts & graphs
+├── nlp_functions.py          # AI question processing
+├── user_interface.py         # Menu & user interaction
+├── main_application.py       # Main app controller
+└── testing_examples.py       # Tests & demonstrations
+Main Components
+🔧 Setup & Configuration
 
----
+Environment variable management
+Package validation
+Connection testing
 
-## 📓 Submission Checklist
+🌡️ Weather Data Functions
 
-✅ Complete all required functions  
-✅ Include at least 5 AI conversations in `ai-conversations/`  
-✅ Document your intentional prompting  
-✅ Fill in your project reflection in `submission/reflection-template.md`  
-✅ Zip your project and upload it to the LMS  
+Location-based weather retrieval
+Multi-day forecasts
+Data caching with fallback strategies
 
----
+📊 Visualization Functions
 
-🧠 AI Conversations  
-Save your AI interactions in the `ai-conversations/` folder.  
-See `ai-conversations/how-to-log-ai-conversations.md` for details.
+Temperature trend charts
+Precipitation probability graphs
+Professional styling options
 
+🤖 Natural Language Processing
 
---
-## 🧠 Need Help with AI Prompts?
+AI-powered question parsing
+Context-aware responses
+Conversation memory
 
-Check out:
-Check out:
-- `resources/ai-tips-tricks.md` — Prompting tips and pitfalls
-- `resources/sample-prompting-journey.md` — Full example of AI-enhanced development
-- `resources/prompts-by-method-step.md` — Prompts aligned with the 6-step dev process
-- `resources/before-after-example.md` — Required: Show how your prompting improved AI-generated code
+🧭 User Interface
 
+Interactive menu system
+Input validation
+Settings management
 
-Good luck and have fun! 💡🌤️
+🔄 Main Application Logic
+
+Component integration
+Error handling
+AI interaction logging
+
+Usage Examples
+Basic Weather Query
+Enter location: Sydney, Australia
+Temperature: 22°C (feels like 24°C)
+Condition: Partly Cloudy
+Natural Language Questions
+
+"What's the weather like in London?"
+"Should I bring an umbrella tomorrow?"
+"Will it be warm this weekend?"
+
+Chart Generation
+
+Temperature trends over multiple days
+Precipitation probability charts
+Customizable styling options
+
+Configuration
+The application uses these environment variables:
+
+AILABKIT_SERVER: AI service endpoint
+AILABKIT_MODEL: AI model name
+AILABKIT_API_KEY: Authentication key
+
+Error Handling
+The application includes robust error handling for:
+
+Invalid locations
+Network connectivity issues
+API service unavailability
+Missing data scenarios
+
+Testing
+Run comprehensive tests:
+python testing_examples.py
+Troubleshooting
+Location Not Found
+
+Try including country name (e.g., "Perth, Australia")
+Use major city names
+Check spelling
+
+API Connection Issues
+
+Verify internet connection
+Check environment variables
+Try again later if service is busy
+
+Missing Features
+
+Ensure all packages are installed
+Some features require AI service availability
+Fallback modes activate automatically
+
+Development Notes
+This project demonstrates effective AI collaboration techniques:
+
+Intentional prompting strategies
+Iterative problem solving
+Comprehensive error handling
+Professional code organization
+
+License
+Educational project - free to use and modify.
+Support
+For issues or questions, refer to the troubleshooting section or check component-specific error messages for detailed guidance.
+
+Built with AI assistance - This project showcases human-AI collaboration in software development.
