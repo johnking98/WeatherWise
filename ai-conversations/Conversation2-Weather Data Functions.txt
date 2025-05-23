@@ -1,0 +1,411 @@
+Tool: Claude
+Date: 2025-05-21
+Me: I need to implement the get_weather_data() function that retrieves weather information for a specified location. Can you help me create a basic implementation using the fetch-my-weather package?
+AI: Here's a basic implementation of the weather data function:
+pythondef get_weather_data(location, forecast_days=5):
+    """
+    Retrieve weather data for a specified location.
+    
+    Args:
+        location (str): City or location name
+        forecast_days (int): Number of days to forecast (1-5)
+    
+    Returns:
+        dict: Weather data including current conditions and forecast
+    """
+    # Get weather data using fetch-my-weather
+    weather_response = get_weather(location=location, format="json")
+    
+    # Extract current conditions
+    current = weather_response.current_condition[0]
+    forecast = weather_response.weather[:forecast_days]
+    
+    return {
+        "location": location,
+        "current": current,
+        "forecast": forecast
+    }
+Me: This is a start, but what happens if the location doesn't exist or the API fails? For a production application, I need comprehensive error handling and data validation. Can you add robust error handling and ensure the function returns consistent data structures even when things go wrong?
+AI: You're absolutely right about needing robust error handling. Here's an improved version:
+pythondef get_weather_data(location: str, forecast_days: int = 5, units: str = "metric") -> Dict[str, Union[str, Dict, List]]:
+    """
+    Retrieve weather data for a specified location with comprehensive error handling.
+    
+    Args:
+        location (str): City or location name
+        forecast_days (int): Number of days to forecast (1-7)
+        units (str): Temperature units ('metric' or 'imperial')
+    
+    Returns:
+        dict: Weather data including current conditions and forecast, or error information
+    """
+    # Input validation
+    if not location or not isinstance(location, str):
+        return {"error": "Invalid location: must be a non-empty string"}
+    
+    if not isinstance(forecast_days, int) or forecast_days < 1 or forecast_days > 7:
+        return {"error": "Invalid forecast_days: must be integer between 1 and 7"}
+    
+    if units not in SUPPORTED_UNITS:
+        return {"error": f"Invalid units: must be one of {SUPPORTED_UNITS}"}
+    
+    try:
+        # Attempt to get weather data
+        weather_response = get_weather(location=location, format="json", units=units)
+        
+        # Validate response structure
+        if not hasattr(weather_response, 'current_condition') or not weather_response.current_condition:
+            return {"error": f"No weather data available for location: {location}"}
+        
+        # Check if location was found
+        if hasattr(weather_response, 'nearest_area') and weather_response.nearest_area:
+            found_location = weather_response.nearest_area[0].areaName[0].value
+        else:
+            found_location = location
+        
+        return {
+            "status": "success",
+            "location": found_location,
+            "current": weather_response.current_condition[0],
+            "forecast": weather_response.weather[:forecast_days] if hasattr(weather_response, 'weather') else [],
+            "units": units,
+            "retrieved_at": datetime.datetime.now().isoformat()
+        }
+        
+    except ConnectionError:
+        return {"error": "Network connection failed. Please check your internet connection."}
+    except Exception as e:
+        return {"error": f"Failed to retrieve weather data: {str(e)}"}
+Me: Great improvement! But the raw API response has a complex nested structure that's hard to work with. Can you create a function that processes and flattens this data into a more user-friendly format that's easier for the rest of my application to use?
+AI: Excellent point! Here's a data processing function that creates a clean, flat structure:
+pythondef process_weather_data(raw_weather_data: Dict) -> Dict:
+    """
+    Process raw weather API response into a clean, user-friendly format.
+    
+    Args:
+        raw_weather_data: Raw response from get_weather_data()
+    
+    Returns:
+        dict: Processed weather data with simplified structure
+    """
+    if "error" in raw_weather_data:
+        return raw_weather_data
+    
+    try:
+        current = raw_weather_data["current"]
+        forecast_raw = raw_weather_data["forecast"]
+        
+        # Process current weather
+        processed_current = {
+            "temperature": int(current.temp_C if raw_weather_data["units"] == "metric" else current.temp_F),
+            "feels_like": int(current.FeelsLikeC if raw_weather_data["units"] == "metric" else current.FeelsLikeF),
+            "condition": current.weatherDesc[0].value,
+            "humidity": int(current.humidity),
+            "wind_speed": int(current.windspeedKmph if raw_weather_data["units"] == "metric" else current.windspeedMiles),
+            "wind_direction": current.winddir16Point,
+            "pressure": int(current.pressure),
+            "visibility": int(current.visibility),
+            "uv_index": int(current.uvIndex),
+            "precipitation": float(current.precipMM)
+        }
+        
+        # Process forecast data
+        processed_forecast = []
+        for day in forecast_raw:
+            day_data = {
+                "date": day.date,
+                "max_temp": int(day.maxtempC if raw_weather_data["units"] == "metric" else day.maxtempF),
+                "min_temp": int(day.mintempC if raw_weather_data["units"] == "metric" else day.mintempF),
+                "condition": day.hourly[4].weatherDesc[0].value,  # Midday condition
+                "precipitation_chance": int(day.hourly[4].chanceofrain),
+                "precipitation_amount": float(day.hourly[4].precipMM),
+                "humidity": int(day.hourly[4].humidity),
+                "wind_speed": int(day.hourly[4].windspeedKmph if raw_weather_data["units"] == "metric" else day.hourly[4].windspeedMiles),
+                "wind_direction": day.hourly[4].winddir16Point
+            }
+            processed_forecast.append(day_data)
+        
+        return {
+            "status": "success",
+            "location": raw_weather_data["location"],
+            "units": raw_weather_data["units"],
+            "current": processed_current,
+            "forecast": processed_forecast,
+            "retrieved_at": raw_weather_data["retrieved_at"]
+        }
+        
+    except (KeyError, AttributeError, IndexError) as e:
+        return {"error": f"Error processing weather data structure: {str(e)}"}
+Me: This is much cleaner! Now I'm thinking about performance - if users query the same location multiple times, I don't want to hit the API every time. Can you add intelligent caching that stores recent data and only makes new API calls when the data is stale?
+AI: Great thinking about performance! Here's an enhanced version with intelligent caching:
+pythonimport time
+from typing import Optional
+
+# Global cache for weather data
+_weather_cache: Dict[str, Dict] = {}
+
+def get_cache_key(location: str, units: str) -> str:
+    """Generate a cache key for weather data."""
+    return f"{location.lower().strip()}_{units}"
+
+def is_cache_valid(cache_entry: Dict, max_age_seconds: int = 600) -> bool:
+    """Check if cached data is still valid (default: 10 minutes)."""
+    if "cached_at" not in cache_entry:
+        return False
+    
+    age = time.time() - cache_entry["cached_at"]
+    return age < max_age_seconds
+
+def get_weather_data_with_cache(location: str, forecast_days: int = 5, 
+                               units: str = "metric", use_cache: bool = True,
+                               cache_duration: int = 600) -> Dict:
+    """
+    Get weather data with intelligent caching.
+    
+    Args:
+        location (str): City or location name
+        forecast_days (int): Number of days to forecast (1-7)
+        units (str): Temperature units ('metric' or 'imperial')
+        use_cache (bool): Whether to use cached data
+        cache_duration (int): Cache validity in seconds
+    
+    Returns:
+        dict: Weather data with cache metadata
+    """
+    cache_key = get_cache_key(location, units)
+    
+    # Check cache first
+    if use_cache and cache_key in _weather_cache:
+        cached_data = _weather_cache[cache_key]
+        if is_cache_valid(cached_data, cache_duration):
+            print(f"📦 Using cached data for {location} (age: {int(time.time() - cached_data['cached_at'])}s)")
+            return {**cached_data["data"], "from_cache": True}
+    
+    # Fetch fresh data
+    print(f"🌐 Fetching fresh weather data for {location}")
+    raw_data = get_weather_data(location, forecast_days, units)
+    
+    if "error" not in raw_data:
+        # Process the data
+        processed_data = process_weather_data(raw_data)
+        
+        if "error" not in processed_data:
+            # Cache the processed data
+            _weather_cache[cache_key] = {
+                "data": processed_data,
+                "cached_at": time.time()
+            }
+            
+            # Clean old cache entries (keep only last 10)
+            if len(_weather_cache) > 10:
+                oldest_key = min(_weather_cache.keys(), 
+                               key=lambda k: _weather_cache[k]["cached_at"])
+                del _weather_cache[oldest_key]
+            
+            return {**processed_data, "from_cache": False}
+    
+    return raw_data
+
+def clear_weather_cache():
+    """Clear all cached weather data."""
+    global _weather_cache
+    _weather_cache.clear()
+    print("🧹 Weather cache cleared")
+
+def get_cache_status() -> Dict:
+    """Get information about current cache status."""
+    if not _weather_cache:
+        return {"cache_size": 0, "entries": []}
+    
+    entries = []
+    for key, value in _weather_cache.items():
+        age = int(time.time() - value["cached_at"])
+        entries.append({
+            "location": key,
+            "age_seconds": age,
+            "valid": is_cache_valid(value)
+        })
+    
+    return {
+        "cache_size": len(_weather_cache),
+        "entries": entries
+    }
+Me: Excellent caching system! One final enhancement - I want to make this function resilient to different edge cases like network timeouts, partial data, and provide helpful suggestions when locations aren't found. Can you add these features plus a validation function that helps users understand what went wrong?
+AI: Perfect! Here's the complete, production-ready implementation with comprehensive edge case handling:
+pythonimport re
+from typing import List
+
+def suggest_location_alternatives(location: str) -> List[str]:
+    """
+    Suggest alternative location formats when a location isn't found.
+    
+    Args:
+        location (str): The location that wasn't found
+    
+    Returns:
+        List[str]: Suggested alternative formats
+    """
+    suggestions = []
+    
+    # Clean the input
+    clean_location = location.strip()
+    
+    # Try different formats
+    if ',' not in clean_location:
+        suggestions.append(f"{clean_location}, Country")
+        suggestions.append(f"{clean_location}, State")
+    
+    # Try with major city format
+    if len(clean_location.split()) > 1:
+        suggestions.append(clean_location.split()[0])  # First word only
+    
+    # Try common variations
+    suggestions.extend([
+        clean_location.title(),  # Title case
+        clean_location.upper(),  # Upper case
+        clean_location.lower()   # Lower case
+    ])
+    
+    return list(set(suggestions))  # Remove duplicates
+
+def validate_weather_response(data: Dict) -> Dict[str, Union[bool, List[str]]]:
+    """
+    Validate weather response and identify missing or problematic data.
+    
+    Args:
+        data (dict): Weather data to validate
+    
+    Returns:
+        dict: Validation results with warnings and missing fields
+    """
+    validation = {
+        "is_valid": True,
+        "warnings": [],
+        "missing_fields": [],
+        "data_quality": "good"
+    }
+    
+    if "error" in data:
+        validation["is_valid"] = False
+        validation["data_quality"] = "error"
+        return validation
+    
+    # Check current weather completeness
+    if "current" in data:
+        required_current_fields = ["temperature", "condition", "humidity"]
+        for field in required_current_fields:
+            if field not in data["current"] or data["current"][field] is None:
+                validation["missing_fields"].append(f"current.{field}")
+    
+    # Check forecast completeness
+    if "forecast" in data:
+        if not data["forecast"]:
+            validation["warnings"].append("No forecast data available")
+        elif len(data["forecast"]) < 3:
+            validation["warnings"].append(f"Limited forecast data: only {len(data['forecast'])} days")
+    
+    # Assess data quality
+    if validation["missing_fields"]:
+        validation["data_quality"] = "partial"
+        if len(validation["missing_fields"]) > 3:
+            validation["is_valid"] = False
+            validation["data_quality"] = "poor"
+    
+    return validation
+
+def get_weather_data_robust(location: str, forecast_days: int = 5, 
+                          units: str = "metric", timeout: int = 30,
+                          use_cache: bool = True, retry_count: int = 2) -> Dict:
+    """
+    Get weather data with comprehensive error handling, retries, and validation.
+    
+    Args:
+        location (str): City or location name
+        forecast_days (int): Number of days to forecast (1-7)
+        units (str): Temperature units ('metric' or 'imperial')
+        timeout (int): Request timeout in seconds
+        use_cache (bool): Whether to use cached data
+        retry_count (int): Number of retries on failure
+    
+    Returns:
+        dict: Comprehensive weather data with metadata and validation info
+    """
+    # Input validation
+    if not location or not isinstance(location, str):
+        return {
+            "error": "Invalid location: must be a non-empty string",
+            "suggestions": ["Please enter a valid city name like 'London' or 'New York'"]
+        }
+    
+    # Clean location input
+    clean_location = re.sub(r'[^\w\s,.-]', '', location.strip())
+    
+    # Try to get data with retries
+    last_error = None
+    for attempt in range(retry_count + 1):
+        try:
+            if attempt > 0:
+                print(f"🔄 Retry attempt {attempt} for {clean_location}")
+            
+            # Get weather data (with caching)
+            weather_data = get_weather_data_with_cache(
+                clean_location, forecast_days, units, use_cache
+            )
+            
+            if "error" in weather_data:
+                last_error = weather_data["error"]
+                
+                # If location not found, try suggestions
+                if "location" in last_error.lower() or "not found" in last_error.lower():
+                    suggestions = suggest_location_alternatives(clean_location)
+                    return {
+                        "error": f"Location '{clean_location}' not found",
+                        "suggestions": suggestions[:3],  # Top 3 suggestions
+                        "help": "Try using a major city name or include country/state"
+                    }
+                
+                # For other errors, continue retry loop
+                continue
+            
+            # Validate the response
+            validation = validate_weather_response(weather_data)
+            
+            # Add validation metadata
+            result = {
+                **weather_data,
+                "validation": validation,
+                "location_searched": clean_location,
+                "attempts": attempt + 1
+            }
+            
+            # Add quality warnings if needed
+            if not validation["is_valid"]:
+                result["warning"] = "Data quality issues detected. Some information may be incomplete."
+            
+            return result
+            
+        except Exception as e:
+            last_error = str(e)
+            if attempt < retry_count:
+                time.sleep(1)  # Wait before retry
+            continue
+    
+    # All retries failed
+    return {
+        "error": f"Failed to retrieve weather data after {retry_count + 1} attempts",
+        "last_error": last_error,
+        "suggestions": [
+            "Check your internet connection",
+            "Try a different location format",
+            "The weather service may be temporarily unavailable"
+        ]
+    }
+
+# Convenience function that combines everything
+def get_weather_data(location: str, forecast_days: int = 5, units: str = "metric") -> Dict:
+    """
+    Main weather data function - calls the robust implementation with default settings.
+    
+    This is the function that should be used throughout the application.
+    """
+    return get_weather_data_robust(location, forecast_days, units)

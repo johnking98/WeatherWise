@@ -1,0 +1,346 @@
+Tool: Claude
+Date: 2025-05-22
+Me: I need to tie everything together in the main application logic. Can you help me create the core integration functions that connect weather data, visualizations, NLP, and the user interface?
+AI: Here's the main application integration logic:
+# Main Application Logic - Integration Hub
+import sys
+import traceback
+from datetime import datetime
+
+def run_weather_advisor():
+    """
+    Main entry point for the Weather Advisor application.
+    Integrates all components and handles the application lifecycle.
+    """
+    print("🌦️ Starting Weather Advisor...")
+    
+    try:
+        # Initialize application
+        if not initialize_application():
+            print("❌ Failed to initialize application")
+            return False
+        
+        # Run main application
+        main_application()
+        
+    except KeyboardInterrupt:
+        print("\n👋 Application stopped by user")
+    except Exception as e:
+        print(f"❌ Critical error: {e}")
+        traceback.print_exc()
+    finally:
+        cleanup_application()
+    
+    return True
+
+def initialize_application():
+    """Initialize all application components."""
+    try:
+        print("🔧 Initializing components...")
+        
+        # Validate environment
+        if not validate_environment():
+            return False
+        
+        # Test core functions
+        print("🧪 Testing core functionality...")
+        test_results = run_startup_tests()
+        
+        if not test_results["all_passed"]:
+            print("⚠️ Some tests failed but continuing...")
+        
+        print("✅ Application initialized successfully")
+        return True
+        
+    except Exception as e:
+        print(f"❌ Initialization failed: {e}")
+        return False
+
+def run_startup_tests():
+    """Run quick tests of core functionality."""
+    tests = {
+        "weather_api": test_weather_api_basic,
+        "ai_connection": test_ai_connection_basic,
+        "visualization": test_visualization_basic,
+        "nlp": test_nlp_basic
+    }
+    
+    results = {"all_passed": True, "details": {}}
+    
+    for test_name, test_func in tests.items():
+        try:
+            result = test_func()
+            results["details"][test_name] = "✅" if result else "⚠️"
+            if not result:
+                results["all_passed"] = False
+        except Exception as e:
+            results["details"][test_name] = f"❌ {str(e)[:50]}"
+            results["all_passed"] = False
+    
+    return results
+
+def test_weather_api_basic():
+    """Basic weather API test."""
+    try:
+        data = get_weather_data("London")
+        return "error" not in data
+    except:
+        return False
+
+def test_ai_connection_basic():
+    """Basic AI connection test."""
+    try:
+        response = get_response("Hello")
+        return len(response) > 0
+    except:
+        return False
+
+def test_visualization_basic():
+    """Basic visualization test."""
+    try:
+        # Test with mock data
+        mock_data = create_mock_weather_data()
+        fig = create_temperature_visualisation(mock_data, output_type='figure')
+        return fig is not None
+    except:
+        return False
+
+def test_nlp_basic():
+    """Basic NLP test."""
+    try:
+        parsed = parse_weather_question("What's the weather?")
+        return "error" not in parsed
+    except:
+        return False
+
+def create_mock_weather_data():
+    """Create mock weather data for testing."""
+    return {
+        "location": "Test City",
+        "current": {
+            "temperature": 20,
+            "feels_like": 22,
+            "condition": "Sunny",
+            "humidity": 60,
+            "wind_speed": 10,
+            "wind_direction": "NW",
+            "visibility": 10,
+            "uv_index": 5
+        },
+        "forecast": [
+            {
+                "date": "2025-01-16",
+                "max_temp": 25,
+                "min_temp": 15,
+                "condition": "Partly Cloudy",
+                "precipitation_chance": 20,
+                "precipitation_amount": 0.0
+            }
+        ],
+        "units": "metric"
+    }
+
+def cleanup_application():
+    """Clean up resources before exit."""
+    try:
+        print("\n🧹 Cleaning up...")
+        clear_weather_cache()
+        print("✅ Cleanup completed")
+    except Exception as e:
+        print(f"⚠️ Cleanup warning: {e}")
+Me: Nice. Now I need the generate_weather_response function that was mentioned in the skeleton, plus utility functions for error handling and logging that tie into the AI interaction tracking required for the assignment.
+AI: Here's the complete integration with response generation and AI interaction tracking:
+def generate_weather_response(parsed_question, weather_data):
+    """
+    Generate a natural language response to a weather question.
+    This is the main interface that coordinates all response generation.
+    
+    Args:
+        parsed_question (dict): Parsed question data
+        weather_data (dict): Weather data
+    
+    Returns:
+        str: Natural language response
+    """
+    # This calls the NLP module's response generation
+    return generate_weather_response(parsed_question, weather_data)
+
+# AI Interaction Tracking for Assignment Requirements
+class AIInteractionLogger:
+    """Track AI interactions for assignment documentation."""
+    
+    def __init__(self):
+        self.interactions = []
+        self.session_start = datetime.now()
+    
+    def log_interaction(self, interaction_type, prompt, response, success=True):
+        """Log an AI interaction."""
+        interaction = {
+            "timestamp": datetime.now().isoformat(),
+            "type": interaction_type,
+            "prompt": prompt[:200] + "..." if len(prompt) > 200 else prompt,
+            "response_length": len(response) if response else 0,
+            "success": success,
+            "session_time": (datetime.now() - self.session_start).total_seconds()
+        }
+        self.interactions.append(interaction)
+    
+    def get_summary(self):
+        """Get interaction summary for assignment documentation."""
+        total = len(self.interactions)
+        successful = sum(1 for i in self.interactions if i["success"])
+        
+        types = {}
+        for interaction in self.interactions:
+            interaction_type = interaction["type"]
+            types[interaction_type] = types.get(interaction_type, 0) + 1
+        
+        return {
+            "total_interactions": total,
+            "successful_interactions": successful,
+            "success_rate": f"{(successful/total*100):.1f}%" if total > 0 else "0%",
+            "interaction_types": types,
+            "session_duration_minutes": (datetime.now() - self.session_start).total_seconds() / 60
+        }
+
+# Global logger instance
+ai_logger = AIInteractionLogger()
+
+def enhanced_weather_workflow(user_input, current_location=None):
+    """
+    Complete weather workflow with AI interaction logging.
+    This demonstrates the full AI-enhanced process for assignment documentation.
+    """
+    workflow_steps = []
+    
+    try:
+        # Step 1: Parse user question with AI
+        workflow_steps.append("🧠 Parsing user question with AI")
+        parsed = parse_weather_question(user_input)
+        ai_logger.log_interaction("question_parsing", user_input, str(parsed), "error" not in parsed)
+        
+        # Step 2: Determine location
+        workflow_steps.append("📍 Determining target location")
+        target_location = parsed.get("location", current_location or "London")
+        if target_location in ["unknown", "contextual"]:
+            target_location = current_location or "London"
+        
+        # Step 3: Fetch weather data
+        workflow_steps.append(f"🌐 Fetching weather data for {target_location}")
+        weather_data = get_weather_data(target_location)
+        
+        # Step 4: Generate AI response
+        workflow_steps.append("🤖 Generating AI-powered response")
+        if "error" not in weather_data:
+            response = generate_weather_response(parsed, weather_data)
+            ai_logger.log_interaction("response_generation", 
+                                     f"Question: {user_input}, Location: {target_location}", 
+                                     response, True)
+        else:
+            response = f"Sorry, I couldn't get weather data: {weather_data['error']}"
+            ai_logger.log_interaction("response_generation", user_input, response, False)
+        
+        return {
+            "success": True,
+            "response": response,
+            "workflow_steps": workflow_steps,
+            "ai_interactions": len(workflow_steps),
+            "location_used": target_location
+        }
+        
+    except Exception as e:
+        error_response = f"I encountered an error processing your request: {str(e)}"
+        ai_logger.log_interaction("error_handling", user_input, error_response, False)
+        
+        return {
+            "success": False,
+            "response": error_response,
+            "workflow_steps": workflow_steps,
+            "error": str(e)
+        }
+
+def demonstrate_ai_capabilities():
+    """
+    Demonstrate various AI capabilities for assignment documentation.
+    """
+    print("🎯 Demonstrating AI Capabilities")
+    print("=" * 50)
+    
+    demo_queries = [
+        "What's the weather like in Sydney?",
+        "Should I bring an umbrella tomorrow?",
+        "Compare today's temperature to yesterday",
+        "What's the forecast for this weekend?",
+        "Will it be good weather for a picnic?"
+    ]
+    
+    results = []
+    
+    for query in demo_queries:
+        print(f"\n🔍 Processing: '{query}'")
+        result = enhanced_weather_workflow(query)
+        
+        print(f"   Response: {result['response'][:100]}...")
+        print(f"   AI Steps: {result['ai_interactions']}")
+        print(f"   Success: {'✅' if result['success'] else '❌'}")
+        
+        results.append(result)
+    
+    # Show AI interaction summary
+    print(f"\n📊 AI Interaction Summary:")
+    summary = ai_logger.get_summary()
+    for key, value in summary.items():
+        print(f"   {key}: {value}")
+    
+    return results
+
+def export_ai_interaction_log():
+    """Export AI interaction log for assignment documentation."""
+    import json
+    
+    log_data = {
+        "session_info": {
+            "start_time": ai_logger.session_start.isoformat(),
+            "end_time": datetime.now().isoformat(),
+            "application": "Weather Advisor"
+        },
+        "summary": ai_logger.get_summary(),
+        "detailed_interactions": ai_logger.interactions
+    }
+    
+    filename = f"ai_interactions_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json"
+    
+    try:
+        with open(filename, 'w') as f:
+            json.dump(log_data, f, indent=2)
+        print(f"✅ AI interaction log exported to {filename}")
+        return filename
+    except Exception as e:
+        print(f"❌ Failed to export log: {e}")
+        return None
+
+# Integration utility functions
+def safe_function_call(func, *args, fallback_result=None, **kwargs):
+    """Safely call a function with error handling."""
+    try:
+        return func(*args, **kwargs)
+    except Exception as e:
+        print(f"⚠️ Function {func.__name__} failed: {e}")
+        return fallback_result
+
+def main():
+    """Main entry point with command line options."""
+    if len(sys.argv) > 1:
+        if sys.argv[1] == "--demo":
+            demonstrate_ai_capabilities()
+        elif sys.argv[1] == "--test":
+            test_all_components()
+        elif sys.argv[1] == "--quick":
+            quick_start()
+        else:
+            print("Usage: python weather_app.py [--demo|--test|--quick]")
+    else:
+        run_weather_advisor()
+
+if __name__ == "__main__":
+    main()
